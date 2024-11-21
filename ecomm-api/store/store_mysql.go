@@ -97,6 +97,65 @@ func (ms *MySQLStorer) CreateOrder(ctx context.Context, o *Order) (*Order, error
 	return o, nil
 }
 
+func (ms *MySQLStorer) GetOrder(ctx context.Context, id int64) (*Order, error) {
+	var o Order
+	err := ms.db.GetContext(ctx, &o, "SELECT * FROM orders WHERE id=?", id)
+	if err != nil {
+		return nil, fmt.Errorf("error getting order: %w", err)
+	}
+
+	var items []OrderItem
+	err = ms.db.SelectContext(ctx, &items, "SELECT * FROM order_items WHERE order_id=?", id)
+	if err != nil {
+		return nil, fmt.Errorf("error getting order items: %w", err)
+	}
+	o.Items = items
+
+	return &o, nil
+}
+
+func (ms *MySQLStorer) ListOrders(ctx context.Context) ([]Order, error) {
+	var orders []Order
+	err := ms.db.SelectContext(ctx, &orders, "SELECT * FROM orders")
+	if err != nil {
+		return nil, fmt.Errorf("error listing orders: %w", err)
+	}
+
+	for i := range orders {
+		var items []OrderItem
+		err = ms.db.SelectContext(ctx, &items, "SELECT * FROM order_items WHERE order_id=?", orders[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting order items: %w", err)
+		}
+		orders[i].Items = items
+	}
+	return orders, nil
+}
+
+func (ms *MySQLStorer) DeleteOrder(ctx context.Context, id int64) error {
+	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
+		_, err := tx.ExecContext(ctx, "DELETE FROM order_items WHERE order_id=?", id)
+
+		if err != nil {
+			return fmt.Errorf("error deleting order items: %w", err)
+		}
+
+		_, err = tx.ExecContext(ctx, "DELETE FROM orders WHERE id=?", id)
+
+		if err != nil {
+			return fmt.Errorf("error deleting order: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("error deleting order: %w", err)
+	}
+
+	return nil
+}
+
 func createOrderItem(ctx context.Context, tx *sqlx.Tx, oi OrderItem) error {
 	res, err := tx.NamedExecContext(ctx, "INSERT INTO order_items (name, quantity, image, price, product_id, order_id) VALUES (:name, :quantity, :image, :price, :product_id, :order_id)", oi)
 	if err != nil {
