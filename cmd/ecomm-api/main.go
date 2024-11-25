@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/gauss2302/ecomm-service/ecomm-api/server"
+	storer "github.com/gauss2302/ecomm-service/ecomm-api/store"
 	"log"
 
 	"github.com/gauss2302/ecomm-service/db"
@@ -17,5 +19,8 @@ func main() {
 
 	log.Println("Connected to database")
 
-	//Store methods here
+	st := storer.NewMySQLStorer(db.GetDB())
+	_ = server.NewServer(st)
+	//hdl := handler.NewHandler(srv)
+
 }
