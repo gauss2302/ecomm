@@ -16,7 +16,16 @@ func NewMySQLStorer(db *sqlx.DB) *MySQLStorer {
 }
 
 func (ms *MySQLStorer) CreateProduct(ctx context.Context, p *Product) (*Product, error) {
-	res, err := ms.db.NamedExecContext(ctx, "INSERT INTO products (name, image, category, description, rating, num_reviews, price, count_in_stock) VALUES (:name, :image, :category, :description, :rating, :num_reviews, :price, :count_in_stock)", p)
+	query := `
+		 INSERT INTO products (
+			  name, image, category, description, 
+			  rating, num_reviews, price, count_in_stock
+		 ) VALUES (
+			  :name, :image, :category, :description, 
+			  :rating, :num_reviews, :price, :count_in_stock
+		 )`
+
+	res, err := ms.db.NamedExecContext(ctx, query, p)
 	if err != nil {
 		return nil, fmt.Errorf("error inserting product: %w", err)
 	}
@@ -26,9 +35,8 @@ func (ms *MySQLStorer) CreateProduct(ctx context.Context, p *Product) (*Product,
 		return nil, fmt.Errorf("error getting last insert id: %w", err)
 	}
 
-	p.ID = id
-
-	return p, nil
+	// Fetch the created product to get the correct timestamps
+	return ms.GetProduct(ctx, id)
 }
 
 func (ms *MySQLStorer) GetProduct(ctx context.Context, id int64) (*Product, error) {

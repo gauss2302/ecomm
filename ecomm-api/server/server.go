@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+
 	storer "github.com/gauss2302/ecomm-service/ecomm-api/store"
 )
 
@@ -10,7 +11,9 @@ type Server struct {
 }
 
 func NewServer(storer *storer.MySQLStorer) *Server {
-	return &Server{storer: storer}
+	return &Server{
+		storer: storer,
+	}
 }
 
 func (s *Server) CreateProduct(ctx context.Context, p *storer.Product) (*storer.Product, error) {
@@ -32,7 +35,6 @@ func (s *Server) UpdateProduct(ctx context.Context, p *storer.Product) (*storer.
 func (s *Server) DeleteProduct(ctx context.Context, id int64) error {
 	return s.storer.DeleteProduct(ctx, id)
 }
-
 func (s *Server) CreateOrder(ctx context.Context, o *storer.Order) (*storer.Order, error) {
 	return s.storer.CreateOrder(ctx, o)
 }
