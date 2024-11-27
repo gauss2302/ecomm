@@ -280,6 +280,30 @@ func (h *handler) deleteOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func toStorerOrder(o OrderReq) *storer.Order {
+	return &storer.Order{
+		PaymentMethod: o.PaymentMethod,
+		TaxPrice:      o.TaxPrice,
+		ShippingPrice: o.ShippingPrice,
+		TotalPrice:    o.TotalPrice,
+		Items:         toStorerOrderItems(o.Items),
+	}
+}
+
+func toStorerOrderItems(items []OrderItem) []storer.OrderItem {
+	var res []storer.OrderItem
+	for _, i := range items {
+		res = append(res, storer.OrderItem{
+			Name:      i.Name,
+			Quantity:  i.Quantity,
+			Image:     i.Image,
+			Price:     i.Price,
+			ProductID: i.ProductID,
+		})
+	}
+	return res
+}
+
 func toOrderRes(o *storer.Order) OrderRes {
 	return OrderRes{
 		ID:            o.ID,
@@ -297,30 +321,6 @@ func toOrderItems(items []storer.OrderItem) []OrderItem {
 	var res []OrderItem
 	for _, i := range items {
 		res = append(res, OrderItem{
-			Name:      i.Name,
-			Quantity:  i.Quantity,
-			Image:     i.Image,
-			Price:     i.Price,
-			ProductID: i.ProductID,
-		})
-	}
-	return res
-}
-
-func toStorerOrder(o OrderReq) *storer.Order {
-	return &storer.Order{
-		PaymentMethod: o.PaymentMethod,
-		TaxPrice:      o.TaxPrice,
-		ShippingPrice: o.ShippingPrice,
-		TotalPrice:    o.TotalPrice,
-		Items:         toStorerOrderItems(o.Items),
-	}
-}
-
-func toStorerOrderItems(items []OrderItem) []storer.OrderItem {
-	var res []storer.OrderItem
-	for _, i := range items {
-		res = append(res, storer.OrderItem{
 			Name:      i.Name,
 			Quantity:  i.Quantity,
 			Image:     i.Image,

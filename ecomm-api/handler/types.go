@@ -33,6 +33,7 @@ type OrderReq struct {
 	TaxPrice      float64     `json:"tax_price"`
 	ShippingPrice float64     `json:"shipping_price"`
 	TotalPrice    float64     `json:"total_price"`
+	UserID        int64       `json:"user_id"`
 }
 
 type OrderItem struct {
