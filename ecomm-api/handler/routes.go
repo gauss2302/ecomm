@@ -32,6 +32,16 @@ func RegisterRoutes(handler *handler) *chi.Mux {
 		})
 	})
 
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/", handler.createUser)
+		r.Patch("/", handler.updateUser)
+		r.Get("/", handler.listUsers)
+
+		r.Route("/{id}", func(r chi.Router) {
+			r.Delete("/", handler.deleteUser)
+		})
+	})
+
 	return r
 }
 func Start(addr string) error {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gauss2302/ecomm-service/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -329,4 +330,138 @@ func toOrderItems(items []storer.OrderItem) []OrderItem {
 		})
 	}
 	return res
+}
+
+func (h *handler) createUser(w http.ResponseWriter, r *http.Request) {
+	var u UserReq
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Hashing passoword
+	hashedPassword, err := utils.HashPassword(u.Password)
+
+	if err != nil {
+		http.Error(w, "error hashing password", http.StatusInternalServerError)
+		return
+	}
+
+	u.Password = hashedPassword
+
+	createdUser, err := h.server.CreateUser(h.ctx, toStorerUser(u))
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	res := toUserRes(createdUser)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+
+}
+
+func toStorerUser(u UserReq) *storer.User {
+	return &storer.User{
+		Name:     u.Name,
+		Email:    u.Email,
+		Password: u.Password,
+		IsAdmin:  u.IsAdmin,
+	}
+}
+
+func toUserRes(u *storer.User) UserRes {
+	return UserRes{
+		Name:    u.Name,
+		Email:   u.Email,
+		IsAdmin: u.IsAdmin,
+	}
+}
+
+func (h *handler) listUsers(w http.ResponseWriter, r *http.Request) {
+	listedUsers, err := h.server.ListUsers(h.ctx)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var res ListUserRes
+
+	for _, u := range listedUsers {
+		res.Users = append(res.Users, toUserRes(&u))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(res)
+
+}
+
+func (h *handler) updateUser(w http.ResponseWriter, r *http.Request) {
+	// Implement token payload in the future
+	var u UserReq
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	updatedUser, err := h.server.GetUser(h.ctx, u.Email)
+
+	if err != nil {
+		http.Error(w, "error getting user", http.StatusInternalServerError)
+		return
+	}
+
+	patchUserReq(updatedUser, u)
+
+	updatedUser, err = h.server.UpdateUser(h.ctx, updatedUser)
+
+	if err != nil {
+		http.Error(w, "error updating user", http.StatusInternalServerError)
+		return
+	}
+
+	res := toUserRes(updatedUser)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+}
+
+func patchUserReq(user *storer.User, u UserReq) {
+	if u.Name != "" {
+		user.Name = u.Name
+	}
+	if u.Email != "" {
+		user.Email = u.Email
+	}
+	if u.Password != "" {
+		hashedPassword, err := utils.HashPassword(u.Password)
+		if err != nil {
+			log.Println("error hashing password")
+			panic(err)
+		}
+		user.Password = hashedPassword
+	}
+	if u.IsAdmin {
+		user.IsAdmin = u.IsAdmin
+	}
+	user.UpdatedAt = toTimePtr(time.Now())
+}
+
+func (h *handler) deleteUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	i, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		http.Error(w, "error parsing ID", http.StatusBadRequest)
+		return
+	}
+
+	err = h.server.DeleteUser(h.ctx, i)
+	if err != nil {
+		http.Error(w, "error deleting user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
